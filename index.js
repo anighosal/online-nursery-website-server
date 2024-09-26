@@ -27,6 +27,7 @@ async function run() {
     const db = client.db("onlineNursery");
     const productCollection = db.collection("products");
     const categoryCollection = db.collection("categories");
+    const orderCollection = db.collection("orders");
 
     app.get("/products", async (req, res) => {
       try {
@@ -49,11 +50,9 @@ async function run() {
         const sortField = req.query.sort || "name";
         const sortOrder = req.query.order === "desc" ? -1 : 1;
 
-        const productsCollection = db.collection("products");
+        const totalProducts = await productCollection.countDocuments(filter);
 
-        const totalProducts = await productsCollection.countDocuments(filter);
-
-        const products = await productsCollection
+        const products = await productCollection
           .find(filter)
           .sort({ [sortField]: sortOrder })
           .skip(skip)
@@ -166,18 +165,13 @@ async function run() {
     });
 
     app.delete("/products/:id", async (req, res) => {
-      const { id } = req.params;
-
-      if (!id) {
-        return res.status(400).json({ message: "Invalid product ID" });
-      }
-
       try {
-        const deletedProduct = await Product.deleteOne({ _id: id });
-
-        if (deletedProduct.deletedCount === 0) {
-          return res.status(404).json({ message: "Product not found" });
-        }
+        const { id } = req.params;
+        console.log(id);
+        const deletedProduct = await productCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        console.log(deletedProduct);
 
         res.status(200).json({ message: "Product deleted successfully" });
       } catch (error) {
@@ -188,6 +182,7 @@ async function run() {
     app.post("/orders", async (req, res) => {
       try {
         const { name, phone, address, cartItems } = req.body;
+        console.log(name, phone, address, cartItems);
 
         if (
           !name ||
@@ -198,38 +193,6 @@ async function run() {
         ) {
           console.log("Invalid order data");
           return res.status(400).json({ message: "Invalid order data" });
-        }
-
-        const outOfStockItems = [];
-        for (const item of cartItems) {
-          const product = await productCollection.findOne({
-            _id: new ObjectId(item.id),
-          });
-
-          if (!product) {
-            console.log("Product not found", item.id);
-            outOfStockItems.push({ ...item, reason: "Product not found" });
-          } else if (product.quantity < item.quantity) {
-            console.log("Out of stock item", item.id);
-            outOfStockItems.push({
-              ...item,
-              reason: "Not enough stock",
-              availableQuantity: product.quantity,
-            });
-          }
-        }
-
-        if (outOfStockItems.length > 0) {
-          return res
-            .status(400)
-            .json({ message: "Some items are out of stock", outOfStockItems });
-        }
-
-        for (const item of cartItems) {
-          await productCollection.updateOne(
-            { _id: new ObjectId(item.id) },
-            { $inc: { quantity: -item.quantity } }
-          );
         }
 
         const newOrder = {
@@ -248,7 +211,7 @@ async function run() {
 
         res.status(201).json({
           message: "Order created successfully",
-          order: insertedOrder,
+          order: result,
         });
       } catch (error) {
         console.error("Error creating order:", error);
