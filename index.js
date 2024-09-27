@@ -111,7 +111,7 @@ async function run() {
       }
 
       try {
-        console.log("Search query:", query); // Check incoming query
+        console.log("Search query:", query);
 
         const products = await Product.find({
           title: { $regex: query, $options: "i" },
@@ -123,7 +123,7 @@ async function run() {
 
         res.status(200).json({ products, categories });
       } catch (error) {
-        console.error("Search error:", error); // Log the actual error
+        console.error("Search error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
       }
     });
@@ -181,13 +181,14 @@ async function run() {
 
     app.post("/orders", async (req, res) => {
       try {
-        const { name, phone, address, cartItems } = req.body;
-        console.log(name, phone, address, cartItems);
+        const { name, phone, address, cartItems, paymentMethod } = req.body;
+        console.log(name, phone, address, cartItems, paymentMethod);
 
         if (
           !name ||
           !phone ||
           !address ||
+          !paymentMethod ||
           !Array.isArray(cartItems) ||
           cartItems.length === 0
         ) {
@@ -200,6 +201,7 @@ async function run() {
           phone,
           address,
           cartItems,
+          paymentMethod,
           status: "Pending",
           createdAt: new Date(),
         };
