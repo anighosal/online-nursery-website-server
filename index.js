@@ -4,13 +4,18 @@ require("dotenv").config();
 const { MongoClient, ObjectId } = require("mongodb");
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 5001;
 
 const url = "mongodb://localhost:27017";
 const dbName = "onlineNursery";
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5177"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.lhk2now.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -45,6 +50,10 @@ async function run() {
         const filter = {};
         if (req.query.category) {
           filter.category = req.query.category;
+        }
+
+        if (req.query.search) {
+          filter.name = { $regex: req.query.search, $options: "i" };
         }
 
         const sortField = req.query.sort || "name";
@@ -258,7 +267,7 @@ async function run() {
 
     console.log("Connected to MongoDB and server is running...");
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
+    console.error("Error connecting to MongoDB", error);
     process.exit(1);
   }
 }
