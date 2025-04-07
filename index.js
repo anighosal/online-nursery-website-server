@@ -12,7 +12,7 @@ const dbName = "onlineNursery";
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5177"],
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
@@ -27,7 +27,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("onlineNursery");
     const productCollection = db.collection("products");
@@ -112,25 +112,18 @@ async function run() {
       }
     });
 
-    app.get("/products/search", async (req, res) => {
-      const { query } = req.query;
-
-      if (!query || query.trim() === "") {
-        return res.status(400).json({ message: "Search query is required" });
-      }
-
+    app.get("/productSearchByName/:title", async (req, res) => {
       try {
-        console.log("Search query:", query);
+        const title = req.params.title;
+        console.log("Search request recieved for:", title);
 
-        const products = await Product.find({
-          title: { $regex: query, $options: "i" },
-        });
+        const query = { title: { $regex: title, $options: "i" } };
+        const result = await productCollection.find(query).toArray();
 
-        const categories = await Category.find({
-          name: { $regex: query, $options: "i" },
-        });
-
-        res.status(200).json({ products, categories });
+        if (result.length === 0) {
+          return res.status(404).json({ message: "No matching toys found" });
+        }
+        res.json(result);
       } catch (error) {
         console.error("Search error:", error);
         res.status(500).json({ message: "Server error", error: error.message });
