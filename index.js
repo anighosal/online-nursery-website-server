@@ -12,7 +12,7 @@ const dbName = "onlineNursery";
 // Middleware
 app.use(
   cors({
-    origin: "https://online-nursery-website-client-plum.vercel.app/",
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
